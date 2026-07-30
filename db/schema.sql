@@ -45,3 +45,18 @@ CREATE TABLE IF NOT EXISTS sitrep_runs (
   created_at      TIMESTAMPTZ DEFAULT NOW(),
   PRIMARY KEY (run_date, source_id)
 );
+
+-- 4. Threat Intel Cache Table (v1.1)
+-- Stores VirusTotal enrichment results to minimize API calls (4/min limit).
+CREATE TABLE IF NOT EXISTS threat_intel_cache (
+  indicator       TEXT PRIMARY KEY,   -- The IP, Domain, or Hash
+  indicator_type  TEXT NOT NULL,      -- 'ip', 'domain', 'hash'
+  vt_malicious    INT NOT NULL,       -- Count of vendors flagging as malicious
+  vt_total        INT NOT NULL,       -- Total vendors checked
+  vt_link         TEXT,               -- Link to VirusTotal report
+  last_checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Index to easily clear old cache entries (e.g., older than 7 days)
+CREATE INDEX IF NOT EXISTS idx_threat_intel_cache_date
+  ON threat_intel_cache(last_checked_at);
