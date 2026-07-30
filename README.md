@@ -28,12 +28,12 @@ SigOne ingests security alerts from any SIEM or XDR, normalizes them into one co
 
 ## Supported sources
 
-- **Wazuh** (v0.1)
-- **Splunk HEC** (v0.2)
-- **Generic JSON** (v0.2)
-- **Microsoft Sentinel** (v0.3)
-- **CrowdStrike Falcon** (v0.3)
-- **Elastic Security** (v1.0)
+- **Wazuh** (v0.1) — MITRE tagging: *Null unless manually tagged*
+- **Splunk HEC** (v0.2) — MITRE tagging: *Null unless manually tagged via ES/CIM*
+- **Generic JSON** (v0.2) — MITRE tagging: *User-defined fallback*
+- **Microsoft Sentinel** (v0.3) — MITRE tagging: *Native extraction*
+- **CrowdStrike Falcon** (v0.3) — MITRE tagging: *Native extraction*
+- **Elastic Security** (v1.0) — MITRE tagging: *Conditional native extraction*
 
 ## How it works
 

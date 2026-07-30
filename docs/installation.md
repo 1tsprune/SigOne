@@ -19,7 +19,31 @@ psql -U your_user -d your_db -f db/schema.sql
 
 ## 2. Configure Your First Source
 
-Before n8n can process alerts, you must register the source in the database. For example, to set up Wazuh to send to your Telegram chat:
+Before n8n can process alerts, you must register the source in the database.
+
+**Option A: Using the Admin Webhook**
+If you imported the `sigone-admin.json` workflow, you can add a source simply by making a POST request to its webhook URL with the following JSON body (don't forget your Header Auth!):
+
+```json
+{
+  "action": "add_update",
+  "source_id": "wazuh-prod",
+  "source_type": "wazuh",
+  "active": true,
+  "send_channel": "telegram",
+  "send_to": "-1001234567890",
+  "mapping_config": {
+    "severity": "$.rule.level",
+    "rule_name": "$.rule.description",
+    "description": "$.full_log",
+    "event_id_source": "$.id",
+    "severity_scale": { "type": "wazuh_level", "critical": 12, "high": 8, "medium": 4 }
+  }
+}
+```
+
+**Option B: Using SQL Directly**
+You can also insert the record directly into PostgreSQL:
 
 ```sql
 INSERT INTO source_registry (source_id, source_type, send_channel, send_to, mapping_config)
@@ -32,12 +56,7 @@ VALUES (
     "severity": "$.rule.level",
     "rule_name": "$.rule.description",
     "description": "$.full_log",
-    "src_ip": "$.data.srcip",
-    "hostname": "$.agent.name",
-    "event_time": "$.timestamp",
     "event_id_source": "$.id",
-    "mitre_technique": "$.rule.mitre.id[0]",
-    "mitre_tactic": "$.rule.mitre.tactic[0]",
     "severity_scale": { "type": "wazuh_level", "critical": 12, "high": 8, "medium": 4 }
   }'
 );
