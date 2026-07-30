@@ -2,19 +2,26 @@
 
 A mapping configuration is a JSON object defining how to translate a source's raw JSON payload into SigOne's `security_events` schema.
 
-## Syntax
+## Syntax and Patterns
 
-Mappings use standard JSONPath syntax (`$.path.to.field`).
+Mappings use standard JSONPath syntax (e.g., `$.path.to.field`).
+
+**Common Extraction Patterns:**
+- **Standard Fields:** `$.alert.title`
+- **Array Indexes:** If a source provides data in arrays (like Sentinel or Elastic), use index brackets to flatten it into the common schema: `$.properties.additionalData.techniques[0]`.
+- **Special Characters in Keys:** If a key has special characters (like Elastic's `@timestamp`), it can typically be addressed directly via `$.@timestamp` thanks to the underlying Lodash extraction layer safely parsing the string.
+- **Missing Fields (Null Fallbacks):** SigOne's extraction logic safely ignores missing fields. If you define `"mitre_technique": "$.threat.technique"` but a specific alert payload lacks the `threat` object, the field gracefully defaults to `null`. *Do not invent mappings or write fallback logic inside the JSONPath itself.*
 
 ## Required Fields
 
 - `severity`: Path to the field containing the severity indicator.
 - `severity_scale`: A block defining how to translate the source severity to SigOne's internal enum. See below.
-- `event_id_source`: Path to a unique ID. If the source does not provide a reliable unique ID, specify a list of paths to hash (e.g., `["$.timestamp", "$.rule.id", "$.agent.id"]`). *(Note: Hashing logic must be implemented in the n8n ingestion workflow).*
+- `event_id_source`: Path to a unique ID. 
+  - **Deduplication Hashing:** If the source does not provide a reliable unique ID, map this field to an invalid path or leave it empty. The n8n ingestion workflow automatically falls back to generating a SHA256 hash of the entire payload body to serve as the deduplication key.
 
 ## Optional Fields
 
-Map these if the source provides them; otherwise, omit them or leave them null in the database.
+Map these if the source provides them; otherwise, they will naturally insert as `null`.
 
 - `rule_name`
 - `description`

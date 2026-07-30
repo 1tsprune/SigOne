@@ -29,11 +29,11 @@ SigOne ingests security alerts from any SIEM or XDR, normalizes them into one co
 ## Supported sources
 
 - **Wazuh** (v0.1)
-- *Splunk (HEC)* (Planned)
-- *Microsoft Sentinel* (Planned)
-- *CrowdStrike* (Planned)
-- *Elastic* (Planned)
-- *Generic JSON* (Planned)
+- **Splunk HEC** (v0.2)
+- **Generic JSON** (v0.2)
+- **Microsoft Sentinel** (v0.3)
+- **CrowdStrike Falcon** (v0.3)
+- **Elastic Security** (v1.0)
 
 ## How it works
 
@@ -42,7 +42,9 @@ SigOne ingests security alerts from any SIEM or XDR, normalizes them into one co
 
 ## Adding a new source
 
-Adding a new source does not require writing new n8n workflow logic. Simply write a new JSON mapping config. See `docs/mapping-config-spec.md` for syntax and requirements.
+Adding a new source does not require writing new n8n workflow logic. Simply write a new JSON mapping config. See `docs/mapping-config-spec.md` for syntax, null-fallback logic, and required array flattening behaviors.
+
+You can then add your source via the included `sigone-admin.json` webhook form without ever touching the SQL database manually.
 
 ## Example output
 
@@ -67,7 +69,7 @@ We **never** guess. We either extract it from the source payload, or we leave it
 - **v0.1:** Core pipeline, Postgres schema, Telegram support, Wazuh preset.
 - **v0.2:** Source-agnostic proof (Splunk HEC, Generic JSON), UI admin form.
 - **v0.3:** MSSP support (multi-tenant), Sentinel, CrowdStrike, Slack support.
-- **v1.0:** Stable release, Elastic support.
+- **v1.0:** Stable release, Elastic support, Finalized documentation.
 
 ## Security and privacy
 

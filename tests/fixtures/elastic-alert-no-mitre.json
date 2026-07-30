@@ -1,0 +1,16 @@
+{
+  "@timestamp": "2026-07-30T18:05:00.000Z",
+  "kibana": {
+    "alert": {
+      "uuid": "ela-111-223",
+      "rule": {
+        "name": "High CPU Usage Threshold",
+        "level": "medium"
+      },
+      "reason": "Host exceeded 90% CPU for 5 minutes."
+    }
+  },
+  "host": {
+    "name": "WIN-DESK-202"
+  }
+}

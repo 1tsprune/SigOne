@@ -1,0 +1,33 @@
+{
+  "@timestamp": "2026-07-30T18:00:00.000Z",
+  "kibana": {
+    "alert": {
+      "uuid": "ela-111-222",
+      "rule": {
+        "name": "Endpoint Security: Malware Detected",
+        "level": "critical"
+      },
+      "reason": "Elastic Endpoint detected Malicious behavior."
+    }
+  },
+  "host": {
+    "name": "WIN-DESK-202"
+  },
+  "source": {
+    "ip": "192.168.1.150"
+  },
+  "threat": [
+    {
+      "tactic": {
+        "name": "Defense Evasion",
+        "id": "TA0005"
+      },
+      "technique": [
+        {
+          "name": "Process Injection",
+          "id": "T1055"
+        }
+      ]
+    }
+  ]
+}

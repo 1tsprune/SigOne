@@ -1,0 +1,19 @@
+{
+  "severity": "$.kibana.alert.rule.level",
+  "rule_name": "$.kibana.alert.rule.name",
+  "description": "$.kibana.alert.reason",
+  "src_ip": "$.source.ip",
+  "dst_ip": "$.destination.ip",
+  "hostname": "$.host.name",
+  "event_time": "$.@timestamp",
+  "event_id_source": "$.kibana.alert.uuid",
+  "mitre_technique": "$.threat[0].technique[0].name",
+  "mitre_tactic": "$.threat[0].tactic.name",
+  "severity_scale": {
+    "type": "string_map",
+    "critical": ["critical"],
+    "high": ["high"],
+    "medium": ["medium"],
+    "low": ["low"]
+  }
+}

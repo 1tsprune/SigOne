@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const jsonpath = require('jsonpath');
 const crypto = require('crypto');
+const lodash = require('lodash');
 
 // Define tests to run
 const testCases = [
@@ -58,16 +59,30 @@ const testCases = [
         fixture: path.join(__dirname, '../fixtures/crowdstrike-alert-no-mitre.json'),
         mapping: path.join(__dirname, '../../sources/crowdstrike/mapping.json'),
         sourceType: 'crowdstrike'
+    },
+    {
+        name: 'Elastic (With MITRE)',
+        fixture: path.join(__dirname, '../fixtures/elastic-alert-mitre.json'),
+        mapping: path.join(__dirname, '../../sources/elastic/mapping.json'),
+        sourceType: 'elastic'
+    },
+    {
+        name: 'Elastic (No MITRE fallback)',
+        fixture: path.join(__dirname, '../fixtures/elastic-alert-no-mitre.json'),
+        mapping: path.join(__dirname, '../../sources/elastic/mapping.json'),
+        sourceType: 'elastic'
     }
 ];
 
 console.log("=== SigOne Mapping Tests ===\n");
 
-// Helper to extract via jsonpath
+// Helper to extract via lodash (mirroring n8n ingest logic)
 function extract(path, data) {
     if (!path) return null;
     try {
-        const result = jsonpath.value(data, path);
+        const cleanPath = path.replace(/^\$\./, '').replace(/^\$\[\'/, '').replace(/\'\]$/, '').replace(/^\$\[\"/, '').replace(/\"\]$/, '');
+        // handle basic bracket notation fallback for lodash if needed, but simple cleanPath works for our cases
+        const result = lodash.get(data, cleanPath);
         return result !== undefined ? result : null;
     } catch (e) {
         return null;
