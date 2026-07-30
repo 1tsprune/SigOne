@@ -105,7 +105,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const stats = $node['Get Daily Stats'].json;\nconst events = $items('Get Today\\'s Events (Capped)').map(i => i.json);\nconst source = $node['Loop Over Sources'].json;\n\nreturn {\n  json: {\n    prompt: `Analyze the following security events for source ${source.source_id}. Provide a summary of topics, top offenders, action items, and MITRE techniques seen. \\n\\nEvents: ${JSON.stringify(events, null, 2)}`,\n    stats: stats,\n    source: source\n  }\n};"
+        "jsCode": "const stats = $node['Get Daily Stats'].json;\nconst events = $items('Get Today\\'s Events (Capped)').map(i => i.json);\nconst source = $node['Loop Over Sources'].json;\n\nconst clientString = source.client_label ? ` (Client: ${source.client_label})` : '';\n\nreturn {\n  json: {\n    prompt: `Analyze the following security events for source ${source.source_id}${clientString}. Provide a summary of topics, top offenders, action items, and MITRE techniques seen. \\n\\nEvents: ${JSON.stringify(events, null, 2)}`,\n    stats: stats,\n    source: source\n  }\n};"
       },
       "id": "code-build-prompt",
       "name": "Build Prompt",
@@ -149,7 +149,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const summary = JSON.parse($json.text);\nconst stats = $node['Build Prompt'].json.stats;\nconst source = $node['Build Prompt'].json.source;\n\nconst today = new Date().toISOString().split('T')[0];\n\nlet msg = `🛡️ *SigOne — Daily Brief*\\n`;\nmsg += `📅 ${today} | Source: ${source.source_id}\\n\\n`;\nmsg += `Severity breakdown: ${stats.critical_events} critical, ${stats.high_events} high, ${stats.medium_events} medium, ${stats.low_events} low\\n`;\nmsg += `Top rule: ${stats.top_rule || 'N/A'}\\n`;\nmsg += `Top source IP: ${stats.top_ip || 'N/A'}\\n\\n`;\n\nif (summary.mitre_seen && summary.mitre_seen.length > 0) {\n  msg += `MITRE ATT&CK seen today: ${summary.mitre_seen.join(', ')}\\n\\n`;\n}\n\nmsg += `Action items:\\n`;\nif (summary.action_items && summary.action_items.length > 0) {\n  summary.action_items.forEach(item => {\n    msg += `- ${item}\\n`;\n  });\n} else {\n  msg += `- None identified.\\n`;\n}\n\nreturn { json: { message: msg, source: source, stats: stats } };"
+        "jsCode": "const summary = JSON.parse($json.text);\nconst stats = $node['Build Prompt'].json.stats;\nconst source = $node['Build Prompt'].json.source;\n\nconst today = new Date().toISOString().split('T')[0];\nconst clientString = source.client_label ? ` | Client: ${source.client_label}` : '';\n\nlet msg = `🛡️ *SigOne — Daily Brief*\\n`;\nmsg += `📅 ${today} | Source: ${source.source_id}${clientString}\\n\\n`;\nmsg += `Severity breakdown: ${stats.critical_events} critical, ${stats.high_events} high, ${stats.medium_events} medium, ${stats.low_events} low\\n`;\nmsg += `Top rule: ${stats.top_rule || 'N/A'}\\n`;\nmsg += `Top source IP: ${stats.top_ip || 'N/A'}\\n\\n`;\n\nif (summary.mitre_seen && summary.mitre_seen.length > 0) {\n  msg += `MITRE ATT&CK seen today: ${summary.mitre_seen.join(', ')}\\n\\n`;\n}\n\nmsg += `Action items:\\n`;\nif (summary.action_items && summary.action_items.length > 0) {\n  summary.action_items.forEach(item => {\n    msg += `- ${item}\\n`;\n  });\n} else {\n  msg += `- None identified.\\n`;\n}\n\nreturn { json: { message: msg, source: source, stats: stats } };"
       },
       "id": "code-render",
       "name": "Render Digest",
@@ -184,6 +184,17 @@
                 ]
               },
               "outputKey": "whatsapp"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.source.send_channel }}",
+                    "value2": "slack"
+                  }
+                ]
+              },
+              "outputKey": "slack"
             }
           ]
         }
@@ -211,6 +222,23 @@
         "telegramApi": {
           "id": "sigone-telegram",
           "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "={{ $json.source.send_to }}",
+        "text": "={{ $json.message }}"
+      },
+      "id": "slack-send",
+      "name": "Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.1,
+      "position": [2000, 0],
+      "credentials": {
+        "slackApi": {
+          "id": "sigone-slack",
+          "name": "Slack account"
         }
       }
     },
@@ -245,7 +273,7 @@
     {
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const source = $node['Loop Over Sources'].json;\nreturn { json: { message: `🛡️ *SigOne — Daily Brief*\\n📅 ${new Date().toISOString().split('T')[0]} | Source: ${source.source_id}\\n\\nNo security events recorded in the last 24 hours.`, source: source, stats: { total_events: 0 } } };"
+        "jsCode": "const source = $node['Loop Over Sources'].json;\nconst clientString = source.client_label ? ` | Client: ${source.client_label}` : '';\nreturn { json: { message: `🛡️ *SigOne — Daily Brief*\\n📅 ${new Date().toISOString().split('T')[0]} | Source: ${source.source_id}${clientString}\\n\\nNo security events recorded in the last 24 hours.`, source: source, stats: { total_events: 0 } } };"
       },
       "id": "code-no-activity",
       "name": "No Activity Message",
@@ -392,10 +420,28 @@
             "index": 0
           }
         ],
-        []
+        [],
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Log Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack": {
       "main": [
         [
           {

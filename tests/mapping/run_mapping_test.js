@@ -34,6 +34,30 @@ const testCases = [
         fixture: path.join(__dirname, '../fixtures/generic-alert.json'),
         mapping: path.join(__dirname, '../../sources/generic-json/mapping.json'),
         sourceType: 'generic-json'
+    },
+    {
+        name: 'Sentinel (With MITRE)',
+        fixture: path.join(__dirname, '../fixtures/sentinel-alert.json'),
+        mapping: path.join(__dirname, '../../sources/sentinel/mapping.json'),
+        sourceType: 'sentinel'
+    },
+    {
+        name: 'Sentinel (No MITRE fallback)',
+        fixture: path.join(__dirname, '../fixtures/sentinel-alert-no-mitre.json'),
+        mapping: path.join(__dirname, '../../sources/sentinel/mapping.json'),
+        sourceType: 'sentinel'
+    },
+    {
+        name: 'CrowdStrike (With MITRE)',
+        fixture: path.join(__dirname, '../fixtures/crowdstrike-alert.json'),
+        mapping: path.join(__dirname, '../../sources/crowdstrike/mapping.json'),
+        sourceType: 'crowdstrike'
+    },
+    {
+        name: 'CrowdStrike (No MITRE fallback)',
+        fixture: path.join(__dirname, '../fixtures/crowdstrike-alert-no-mitre.json'),
+        mapping: path.join(__dirname, '../../sources/crowdstrike/mapping.json'),
+        sourceType: 'crowdstrike'
     }
 ];
 

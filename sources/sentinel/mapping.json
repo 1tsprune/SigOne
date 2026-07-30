@@ -1,0 +1,19 @@
+{
+  "severity": "$.properties.severity",
+  "rule_name": "$.properties.title",
+  "description": "$.properties.description",
+  "src_ip": "$.flattened_entities.source_ip",
+  "dst_ip": "$.flattened_entities.dest_ip",
+  "hostname": "$.flattened_entities.hostname",
+  "event_time": "$.properties.createdTimeUtc",
+  "event_id_source": "$.name",
+  "mitre_technique": "$.properties.additionalData.techniques[0]",
+  "mitre_tactic": "$.properties.additionalData.tactics[0]",
+  "severity_scale": {
+    "type": "string_map",
+    "critical": ["fatal"],
+    "high": ["high"],
+    "medium": ["medium"],
+    "low": ["low"]
+  }
+}

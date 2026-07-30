@@ -1,0 +1,19 @@
+{
+  "severity": "$.event.SeverityName",
+  "rule_name": "$.event.Description",
+  "description": "$.event.Description",
+  "src_ip": "$.event.LocalIP",
+  "dst_ip": "$.event.RemoteIP",
+  "hostname": "$.event.ComputerName",
+  "event_time": "$.event.DetectTimestamp",
+  "event_id_source": "$.event.DetectId",
+  "mitre_technique": "$.event.Technique",
+  "mitre_tactic": "$.event.Tactic",
+  "severity_scale": {
+    "type": "string_map",
+    "critical": ["critical"],
+    "high": ["high"],
+    "medium": ["medium"],
+    "low": ["low"]
+  }
+}

@@ -20,7 +20,7 @@ sourceConfigs.forEach(source => {
     console.log(`  -> Branch: WHATSAPP (go-wa stub)`);
     console.log(`     Sending to number: ${source.send_to}`);
   } else if (source.send_channel === 'slack') {
-    console.log(`  -> Branch: SLACK (Stub)`);
+    console.log(`  -> Branch: SLACK (Native node)`);
     console.log(`     Sending to channel: ${source.send_to}`);
   } else {
     console.log(`  -> ERROR: Unknown channel ${source.send_channel}`);

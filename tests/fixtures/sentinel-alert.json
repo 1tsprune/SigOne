@@ -1,0 +1,17 @@
+{
+  "name": "INC-8891-23",
+  "properties": {
+    "title": "Impossible travel activity",
+    "description": "User logged in from two distant geographic locations within an impossible timeframe.",
+    "severity": "High",
+    "createdTimeUtc": "2026-07-30T16:00:00Z",
+    "additionalData": {
+      "tactics": ["InitialAccess"],
+      "techniques": ["T1078.004"]
+    }
+  },
+  "flattened_entities": {
+    "source_ip": "185.15.22.44",
+    "hostname": "AZ-WEB-01"
+  }
+}

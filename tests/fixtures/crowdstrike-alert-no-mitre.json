@@ -1,0 +1,10 @@
+{
+  "event": {
+    "DetectId": "ldt:abc123def457",
+    "SeverityName": "Critical",
+    "Description": "Ransomware behavior detected (No MITRE)",
+    "DetectTimestamp": "2026-07-30T17:05:00Z",
+    "ComputerName": "CORP-LAP-99",
+    "LocalIP": "10.50.2.14"
+  }
+}
