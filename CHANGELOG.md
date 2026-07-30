@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.0] - Threat Intel Enrichment (WIP)
+### Added
+- **Database Schema**: Added `threat_intel_cache` table to Postgres schema to cache VirusTotal enrichment lookups.
+- **Roadmap**: Added VT enrichment to the roadmap in `README.md` focusing on "Top Offender Enrichment" to respect rate limits.
+
 ## [v1.0.0] - Stable Release
 ### Added
 - **Elastic Security Preset**: Native JSONPath configurations parsing Elastic ECS webhook payloads, correctly handling the `threat` array objects.
