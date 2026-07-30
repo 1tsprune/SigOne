@@ -75,6 +75,7 @@ In n8n, go to **Credentials** and set up:
 - **Telegram API:** Enter the Bot Token from @BotFather.
 - **Header Auth:** Create a secret token (e.g., `Bearer my-secret-token`) that your SIEM will use to authenticate with the ingest webhook.
 - **OpenAI API:** Enter your OpenAI API key.
+- **VirusTotal API (v1.1, optional):** Create a new **Header Auth** credential in n8n with header name `x-apikey` and value set to your VirusTotal API key. Name it `VirusTotal API` so it matches the workflow's expected credential name (`sigone-virustotal`). If you skip this, the VT enrichment nodes will error — you can deactivate them in the workflow if you don't need threat intel enrichment.
 
 *Ensure all nodes in the imported workflows are mapped to these credentials.*
 

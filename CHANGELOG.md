@@ -2,10 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v1.1.0] - Threat Intel Enrichment (WIP)
+## [v1.1.0] - Threat Intel Enrichment
 ### Added
-- **Database Schema**: Added `threat_intel_cache` table to Postgres schema to cache VirusTotal enrichment lookups.
-- **Roadmap**: Added VT enrichment to the roadmap in `README.md` focusing on "Top Offender Enrichment" to respect rate limits.
+- **VirusTotal Integration:** Extended `sigone-daily-digest` workflow with 11 new nodes that extract the top 3 external IPs from daily events, check a local Postgres cache first, then call the VirusTotal `/ip_addresses` API with a 15-second rate-limit delay between lookups.
+- **`threat_intel_cache` Table:** New Postgres table caching VT lookup results for 7 days to minimize API consumption (target: <10 calls/day even with multiple sources).
+- **Emoji-Coded Risk Indicators:** Digest messages now show 🔴 (>5 vendors flagged), 🟡 (1-5 vendors), or ✅ (clean) next to each enriched IP.
+- **Internal IP Filtering:** The extraction logic automatically excludes RFC 1918 ranges (10.x, 172.16-31.x, 192.168.x) and loopback addresses from VT lookups.
+- **VT Enrichment Test Suite:** 10 fixture-based tests covering IP extraction, internal-only fallback, cache hit/miss simulation, and digest rendering.
 
 ## [v1.0.0] - Stable Release
 ### Added

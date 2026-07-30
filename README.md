@@ -70,7 +70,7 @@ We **never** guess. We either extract it from the source payload, or we leave it
 - **v0.2:** Source-agnostic proof (Splunk HEC, Generic JSON), UI admin form.
 - **v0.3:** MSSP support (multi-tenant), Sentinel, CrowdStrike, Slack support.
 - **v1.0:** Stable release, Elastic support, Finalized documentation.
-- **v1.1 (WIP):** Threat Intel Enrichment (VirusTotal integration with smart caching to respect 4/min API limits).
+- **v1.1:** Threat Intel Enrichment — VirusTotal integration with smart caching, rate-limit-safe top-3-IP lookup, emoji-coded risk indicators in digest messages.
 
 ## Security and privacy
 
