@@ -2,7 +2,7 @@
 
 Any SIEM, one daily brief. A source-agnostic security alert digest pipeline built on n8n, Postgres, and structured LLM output.
 
-License: MIT · Platform: n8n · Status: MVP v0.1
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) · Platform: n8n · Status: v1.1.0
 
 ## If you are... Start here
 
@@ -141,4 +141,4 @@ All API keys, DB credentials, and bot tokens are stored solely in n8n credential
 
 ## License
 
-MIT License.
+[MIT License](./LICENSE)
