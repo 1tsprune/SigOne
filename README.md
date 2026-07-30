@@ -77,7 +77,7 @@ All API keys, DB credentials, and bot tokens are stored solely in n8n credential
 
 ## Author
 
-Built by a security engineer bridging the gap between automation and actionable triage.
+**Eky Januarta** — [1tsprune.com](https://1tsprune.com)
 
 ## License
 
