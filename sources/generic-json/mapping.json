@@ -1,0 +1,19 @@
+{
+  "severity": "$.alert.level",
+  "rule_name": "$.alert.title",
+  "description": "$.alert.summary",
+  "src_ip": "$.context.source_ip",
+  "dst_ip": "$.context.destination_ip",
+  "hostname": "$.context.hostname",
+  "event_time": "$.timestamp",
+  "event_id_source": "$.event_uuid",
+  "mitre_technique": "$.context.mitre_id",
+  "mitre_tactic": "$.context.mitre_tactic",
+  "severity_scale": {
+    "type": "string_map",
+    "critical": ["p1", "critical"],
+    "high": ["p2", "high"],
+    "medium": ["p3", "medium"],
+    "low": ["p4", "low"]
+  }
+}

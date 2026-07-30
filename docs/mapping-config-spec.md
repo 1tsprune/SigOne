@@ -27,9 +27,13 @@ Map these if the source provides them; otherwise, omit them or leave them null i
 
 ## Severity Scale Definition
 
-The `severity_scale` block handles translation.
+The `severity_scale` block handles translation from the source's native severity to SigOne's internal enum (`critical`, `high`, `medium`, `low`, `info`).
 
-**Integer Thresholds (e.g., Wazuh)**
+There are two supported types:
+
+### 1. Integer Thresholds (`wazuh_level`)
+Use this when the source provides a numeric severity score. The values defined in the config are the minimum thresholds for that tier (inclusive).
+
 ```json
 "severity_scale": {
   "type": "wazuh_level", // Indicates a numeric >= threshold check
@@ -40,7 +44,19 @@ The `severity_scale` block handles translation.
 }
 ```
 
-*(String-based mapping specs will be added when supporting sources like Sentinel).*
+### 2. String Mapping (`string_map`)
+Use this when the source provides string-based severities (e.g., Splunk, Sentinel, CrowdStrike). The block defines an array of acceptable strings for each internal severity tier. Case-insensitive.
+
+```json
+"severity_scale": {
+  "type": "string_map",
+  "critical": ["critical", "fatal", "p1"],
+  "high": ["high", "severe", "p2"],
+  "medium": ["medium", "moderate", "p3"],
+  "low": ["low", "minor", "p4"]
+  // anything unmapped defaults to info
+}
+```
 
 ## Testing
 

@@ -1,0 +1,19 @@
+{
+  "severity": "$.result.severity",
+  "rule_name": "$.search_name",
+  "description": "$.result._raw",
+  "src_ip": "$.result.src_ip",
+  "dst_ip": "$.result.dest_ip",
+  "hostname": "$.result.host",
+  "event_time": "$.result._time",
+  "event_id_source": "$.sid",
+  "mitre_technique": "$.result.mitre_technique",
+  "mitre_tactic": "$.result.mitre_tactic",
+  "severity_scale": {
+    "type": "string_map",
+    "critical": ["critical", "fatal"],
+    "high": ["high", "severe"],
+    "medium": ["medium", "moderate"],
+    "low": ["low", "minor"]
+  }
+}

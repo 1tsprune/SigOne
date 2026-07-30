@@ -3,17 +3,41 @@ const path = require('path');
 const jsonpath = require('jsonpath');
 const crypto = require('crypto');
 
-// Load fixtures and mapping
-const mappingPath = path.join(__dirname, '../../sources/wazuh/mapping.json');
-const mapping = JSON.parse(fs.readFileSync(mappingPath, 'utf8'));
-
-const fixturePaths = [
-    path.join(__dirname, '../fixtures/wazuh-alert.json'),
-    path.join(__dirname, '../fixtures/wazuh-alert-no-mitre.json')
+// Define tests to run
+const testCases = [
+    {
+        name: 'Wazuh (With MITRE)',
+        fixture: path.join(__dirname, '../fixtures/wazuh-alert.json'),
+        mapping: path.join(__dirname, '../../sources/wazuh/mapping.json'),
+        sourceType: 'wazuh'
+    },
+    {
+        name: 'Wazuh (No MITRE fallback)',
+        fixture: path.join(__dirname, '../fixtures/wazuh-alert-no-mitre.json'),
+        mapping: path.join(__dirname, '../../sources/wazuh/mapping.json'),
+        sourceType: 'wazuh'
+    },
+    {
+        name: 'Splunk HEC (With MITRE)',
+        fixture: path.join(__dirname, '../fixtures/splunk-alert.json'),
+        mapping: path.join(__dirname, '../../sources/splunk-hec/mapping.json'),
+        sourceType: 'splunk-hec'
+    },
+    {
+        name: 'Splunk HEC (No MITRE fallback)',
+        fixture: path.join(__dirname, '../fixtures/splunk-alert-no-mitre.json'),
+        mapping: path.join(__dirname, '../../sources/splunk-hec/mapping.json'),
+        sourceType: 'splunk-hec'
+    },
+    {
+        name: 'Generic JSON',
+        fixture: path.join(__dirname, '../fixtures/generic-alert.json'),
+        mapping: path.join(__dirname, '../../sources/generic-json/mapping.json'),
+        sourceType: 'generic-json'
+    }
 ];
 
 console.log("=== SigOne Mapping Tests ===\n");
-console.log(`Mapping: ${mappingPath}\n`);
 
 // Helper to extract via jsonpath
 function extract(path, data) {
@@ -26,14 +50,18 @@ function extract(path, data) {
     }
 }
 
-fixturePaths.forEach(fixturePath => {
-    const payload = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
-    console.log(`--- Testing Payload: ${path.basename(fixturePath)} ---`);
+testCases.forEach(test => {
+    const payload = JSON.parse(fs.readFileSync(test.fixture, 'utf8'));
+    const mapping = JSON.parse(fs.readFileSync(test.mapping, 'utf8'));
+    
+    console.log(`--- Testing: ${test.name} ---`);
+    console.log(`Payload: ${path.basename(test.fixture)}`);
+    console.log(`Mapping: ${path.basename(test.mapping)}\n`);
 
     // 1. Map generic fields
     const normalized = {
-        source_id: 'wazuh-test',
-        source_type: 'wazuh',
+        source_id: `test-${test.sourceType}`,
+        source_type: test.sourceType,
         rule_name: extract(mapping.rule_name, payload),
         description: extract(mapping.description, payload),
         src_ip: extract(mapping.src_ip, payload),
@@ -62,16 +90,18 @@ fixturePaths.forEach(fixturePath => {
     if (mapping.severity_scale && mapping.severity_scale.type === 'wazuh_level') {
         const level = parseInt(rawSeverity, 10);
         if (!isNaN(level)) {
-            if (level >= mapping.severity_scale.critical) {
-                finalSeverity = 'critical';
-            } else if (level >= mapping.severity_scale.high) {
-                finalSeverity = 'high';
-            } else if (level >= mapping.severity_scale.medium) {
-                finalSeverity = 'medium';
-            } else {
-                finalSeverity = 'low';
-            }
+            if (level >= mapping.severity_scale.critical) finalSeverity = 'critical';
+            else if (level >= mapping.severity_scale.high) finalSeverity = 'high';
+            else if (level >= mapping.severity_scale.medium) finalSeverity = 'medium';
+            else finalSeverity = 'low';
         }
+    } else if (mapping.severity_scale && mapping.severity_scale.type === 'string_map') {
+        const strVal = rawSeverity ? String(rawSeverity).toLowerCase() : '';
+        if (mapping.severity_scale.critical && mapping.severity_scale.critical.includes(strVal)) finalSeverity = 'critical';
+        else if (mapping.severity_scale.high && mapping.severity_scale.high.includes(strVal)) finalSeverity = 'high';
+        else if (mapping.severity_scale.medium && mapping.severity_scale.medium.includes(strVal)) finalSeverity = 'medium';
+        else if (mapping.severity_scale.low && mapping.severity_scale.low.includes(strVal)) finalSeverity = 'low';
+        else finalSeverity = 'info';
     } else {
         finalSeverity = rawSeverity ? String(rawSeverity).toLowerCase() : 'info';
     }

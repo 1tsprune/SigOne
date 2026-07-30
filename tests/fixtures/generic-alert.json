@@ -1,0 +1,14 @@
+{
+  "event_uuid": "gen-8a8b-4c4d",
+  "timestamp": "2026-07-30T15:00:00Z",
+  "alert": {
+    "level": "p2",
+    "title": "Unusual Data Exfiltration",
+    "summary": "Large outbound transfer over port 443 to unknown IP."
+  },
+  "context": {
+    "source_ip": "192.168.1.100",
+    "destination_ip": "203.0.113.88",
+    "hostname": "FS-01"
+  }
+}

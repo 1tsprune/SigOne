@@ -1,0 +1,260 @@
+{
+  "name": "sigone-admin",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sigone-admin",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-admin",
+      "name": "Admin Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "sigone-admin-webhook-id",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "sigone-admin-auth",
+          "name": "Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.action }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "add_update",
+              "outputKey": "add_update"
+            },
+            {
+              "value2": "list",
+              "outputKey": "list"
+            },
+            {
+              "value2": "remove",
+              "outputKey": "remove"
+            }
+          ]
+        }
+      },
+      "id": "switch-action",
+      "name": "Switch Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO source_registry (source_id, source_type, mapping_config, active, send_channel, send_to) \nVALUES ($1, $2, $3, $4, $5, $6) \nON CONFLICT (source_id) DO UPDATE SET \n  source_type = EXCLUDED.source_type, \n  mapping_config = EXCLUDED.mapping_config, \n  active = EXCLUDED.active, \n  send_channel = EXCLUDED.send_channel, \n  send_to = EXCLUDED.send_to;",
+        "options": {
+          "queryParameters": "={{ $json.body.source_id }}, {{ $json.body.source_type }}, {{ JSON.stringify($json.body.mapping_config) }}, {{ $json.body.active !== false }}, {{ $json.body.send_channel }}, {{ $json.body.send_to }}"
+        }
+      },
+      "id": "postgres-upsert-source",
+      "name": "Upsert Source",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [500, -200],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Source successfully added or updated."
+      },
+      "id": "respond-add",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, -200]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT source_id, source_type, active, send_channel, send_to FROM source_registry ORDER BY source_id ASC;"
+      },
+      "id": "postgres-list",
+      "name": "List Sources",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [500, 0],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "let html = '<h1>Registered Sources</h1><table border=\"1\" cellpadding=\"5\"><tr><th>Source ID</th><th>Type</th><th>Active</th><th>Channel</th><th>Destination</th></tr>';\n\nconst items = $input.all();\nitems.forEach(item => {\n  const row = item.json;\n  html += `<tr><td>${row.source_id}</td><td>${row.source_type}</td><td>${row.active}</td><td>${row.send_channel}</td><td>${row.send_to}</td></tr>`;\n});\nhtml += '</table>';\n\nreturn { json: { html: html } };"
+      },
+      "id": "code-format-list",
+      "name": "Format HTML List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [700, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.html }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-list",
+      "name": "Respond HTML",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM source_registry WHERE source_id = $1;",
+        "options": {
+          "queryParameters": "={{ $json.body.source_id }}"
+        }
+      },
+      "id": "postgres-remove",
+      "name": "Remove Source from Registry",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [500, 200],
+      "notesInFlow": true,
+      "notes": "Removes configuration only, retains historical events in security_events.",
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "Source configuration successfully removed. Historical events remain intact."
+      },
+      "id": "respond-remove",
+      "name": "Respond Removed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [700, 200]
+    },
+    {
+      "parameters": {
+        "workflowId": "sigone-error-alert"
+      },
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 400]
+    }
+  ],
+  "connections": {
+    "Admin Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Action": {
+      "main": [
+        [
+          {
+            "node": "Upsert Source",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "List Sources",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Remove Source from Registry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Source": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Sources": {
+      "main": [
+        [
+          {
+            "node": "Format HTML List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format HTML List": {
+      "main": [
+        [
+          {
+            "node": "Respond HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Source from Registry": {
+      "main": [
+        [
+          {
+            "node": "Respond Removed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
