@@ -37,8 +37,67 @@ SigOne ingests security alerts from any SIEM or XDR, normalizes them into one co
 
 ## How it works
 
-1. **Ingestion (Real-time):** Your SIEM sends alerts to a generic webhook. SigOne looks up the source's mapping config, normalizes the payload into a common schema, and upserts it into Postgres.
-2. **Summarization (Scheduled batch):** A daily digest workflow iterates over active sources, calculates exact statistics using SQL (not LLMs), uses an LLM solely to summarize events into actionable topics, and sends the digest via the configured channel (default: Telegram).
+### Ingestion (Real-time)
+
+Your SIEM sends alerts to a generic webhook. SigOne identifies the source, loads its mapping config, normalizes the payload, and upserts it into Postgres with deduplication.
+
+```mermaid
+flowchart TD
+    A[SIEM / XDR] -->|Webhook POST| B[Receive Webhook]
+    B --> C[Identify Source]
+    C --> D[Load mapping.json]
+    D --> E[Normalize Payload]
+    E --> F[Upsert to security_events]
+    F --> G[Dedupe by event_id]
+```
+
+### Daily Digest (Scheduled batch)
+
+A scheduled workflow loops over all active sources, computes deterministic stats via SQL, enriches top IPs via VirusTotal (with local caching), then sends an LLM-structured summary to Telegram or Slack.
+
+```mermaid
+flowchart TD
+    A[Schedule Trigger 08:00] --> B[Get Active Sources]
+    B --> C[Loop Over Sources]
+    C --> D[Get Daily Stats - SQL]
+    D --> E[Get Events - Capped 50]
+    E --> F{Any events?}
+    F -->|No| G[No Activity Message]
+    F -->|Yes| H[Extract Top 3 External IPs]
+    H --> I[Loop IPs]
+    I --> J{Has IP?}
+    J -->|No| K[Skip]
+    J -->|Yes| L[Check VT Cache]
+    L --> M{Cache Hit?}
+    M -->|Yes| K
+    M -->|No| N[VirusTotal API Lookup]
+    N --> O[Save to Cache]
+    O --> P[Wait 15s - Rate Limit]
+    P --> K
+    K --> I
+    I -->|Done| Q[Get VT Results from Cache]
+    Q --> R[Build LLM Prompt + VT Context]
+    R --> S[LLM Structured Summary]
+    S --> T[Render Digest Message]
+    T --> U{Send Channel?}
+    G --> U
+    U -->|Telegram| V[Telegram Bot]
+    U -->|Slack| W[Slack Bot]
+    V --> X[Log Run to sitrep_runs]
+    W --> X
+    X --> Y[Next Source]
+    Y --> C
+```
+
+### Error Alerting
+
+If any workflow fails, `sigone-error-alert` catches the error and sends a diagnostic message (workflow name, failing node, error detail) to Telegram.
+
+```mermaid
+flowchart LR
+    A[Workflow Error Trigger] --> B[Format Error Message]
+    B --> C[Send to Telegram]
+```
 
 ## Adding a new source
 
