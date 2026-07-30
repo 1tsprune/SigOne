@@ -2,7 +2,7 @@
 
 Any SIEM, one daily brief. A source-agnostic security alert digest pipeline built on n8n, Postgres, and structured LLM output.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) · Platform: n8n · Status: v1.1.0
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE) [![Platform: n8n](https://img.shields.io/badge/Platform-n8n-FF6D5A.svg?logo=n8n&logoColor=white)](https://n8n.io) [![Status: v1.1.0](https://img.shields.io/badge/Status-v1.1.0-brightgreen.svg)](https://github.com/1tsprune/SigOne/releases/tag/v1.1.0)
 
 ## If you are... Start here
 
