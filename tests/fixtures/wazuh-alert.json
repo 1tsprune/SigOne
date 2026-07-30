@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-07-30T10:15:30.123+0000",
+  "rule": {
+    "level": 10,
+    "description": "Multiple failed SSH logins",
+    "id": "5716",
+    "mitre": {
+      "id": ["T1110.001"],
+      "tactic": ["Credential Access"],
+      "technique": ["Password Guessing"]
+    }
+  },
+  "agent": {
+    "id": "001",
+    "name": "db-01"
+  },
+  "manager": {
+    "name": "wazuh-manager"
+  },
+  "id": "1672534530.12345",
+  "full_log": "Jul 30 10:15:30 db-01 sshd[1234]: Failed password for invalid user admin from 203.0.113.44 port 53422 ssh2",
+  "decoder": {
+    "name": "sshd"
+  },
+  "data": {
+    "srcip": "203.0.113.44",
+    "dstuser": "admin"
+  },
+  "location": "/var/log/auth.log"
+}

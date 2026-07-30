@@ -1,0 +1,435 @@
+{
+  "name": "sigone-daily-digest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM source_registry WHERE active = TRUE;"
+      },
+      "id": "postgres-get-sources",
+      "name": "Get Active Sources",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [200, 0],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-sources",
+      "name": "Loop Over Sources",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  (SELECT COUNT(*) FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day') as total_events,\n  (SELECT COUNT(*) FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' AND severity = 'critical') as critical_events,\n  (SELECT COUNT(*) FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' AND severity = 'high') as high_events,\n  (SELECT COUNT(*) FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' AND severity = 'medium') as medium_events,\n  (SELECT COUNT(*) FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' AND severity = 'low') as low_events,\n  (SELECT rule_name FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' GROUP BY rule_name ORDER BY COUNT(*) DESC LIMIT 1) as top_rule,\n  (SELECT src_ip FROM security_events WHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' AND src_ip IS NOT NULL GROUP BY src_ip ORDER BY COUNT(*) DESC LIMIT 1) as top_ip;\n",
+        "options": {
+          "queryParameters": "={{ $json.source_id }}"
+        }
+      },
+      "id": "postgres-get-stats",
+      "name": "Get Daily Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [600, 0],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT severity, rule_name, description, src_ip, dst_ip, hostname, mitre_technique, mitre_tactic \nFROM security_events \nWHERE source_id = $1 AND received_at >= NOW() - INTERVAL '1 day' \nORDER BY CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 WHEN 'low' THEN 4 ELSE 5 END, received_at DESC \nLIMIT 50;",
+        "options": {
+          "queryParameters": "={{ $node['Loop Over Sources'].json.source_id }}"
+        }
+      },
+      "id": "postgres-get-events",
+      "name": "Get Today's Events (Capped)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [800, 0],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $node['Get Daily Stats'].json.total_events > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-events-exist",
+      "name": "Any events today?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1000, 0]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const stats = $node['Get Daily Stats'].json;\nconst events = $items('Get Today\\'s Events (Capped)').map(i => i.json);\nconst source = $node['Loop Over Sources'].json;\n\nreturn {\n  json: {\n    prompt: `Analyze the following security events for source ${source.source_id}. Provide a summary of topics, top offenders, action items, and MITRE techniques seen. \\n\\nEvents: ${JSON.stringify(events, null, 2)}`,\n    stats: stats,\n    source: source\n  }\n};"
+      },
+      "id": "code-build-prompt",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, -100]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4",
+        "messages": {
+          "messageValues": [
+            {
+              "content": "={{ $json.prompt }}"
+            }
+          ]
+        }
+      },
+      "id": "llm-summarize",
+      "name": "Summarize (LLM)",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1,
+      "position": [1400, -100],
+      "credentials": {
+        "openAiApi": {
+          "id": "sigone-openai",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"topics\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"theme\": { \"type\": \"string\" },\n          \"summary\": { \"type\": \"string\" }\n        }\n      }\n    },\n    \"top_offenders\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"entity\": { \"type\": \"string\" },\n          \"reason\": { \"type\": \"string\" }\n        }\n      }\n    },\n    \"action_items\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    },\n    \"mitre_seen\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" }\n    }\n  }\n}"
+      },
+      "id": "llm-parser",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1,
+      "position": [1400, 100]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const summary = JSON.parse($json.text);\nconst stats = $node['Build Prompt'].json.stats;\nconst source = $node['Build Prompt'].json.source;\n\nconst today = new Date().toISOString().split('T')[0];\n\nlet msg = `🛡️ *SigOne — Daily Brief*\\n`;\nmsg += `📅 ${today} | Source: ${source.source_id}\\n\\n`;\nmsg += `Severity breakdown: ${stats.critical_events} critical, ${stats.high_events} high, ${stats.medium_events} medium, ${stats.low_events} low\\n`;\nmsg += `Top rule: ${stats.top_rule || 'N/A'}\\n`;\nmsg += `Top source IP: ${stats.top_ip || 'N/A'}\\n\\n`;\n\nif (summary.mitre_seen && summary.mitre_seen.length > 0) {\n  msg += `MITRE ATT&CK seen today: ${summary.mitre_seen.join(', ')}\\n\\n`;\n}\n\nmsg += `Action items:\\n`;\nif (summary.action_items && summary.action_items.length > 0) {\n  summary.action_items.forEach(item => {\n    msg += `- ${item}\\n`;\n  });\n} else {\n  msg += `- None identified.\\n`;\n}\n\nreturn { json: { message: msg, source: source, stats: stats } };"
+      },
+      "id": "code-render",
+      "name": "Render Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, -100]
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "outputMode": "multiplex",
+        "options": {
+          "rules": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.source.send_channel }}",
+                    "value2": "telegram"
+                  }
+                ]
+              },
+              "outputKey": "telegram"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{ $json.source.send_channel }}",
+                    "value2": "whatsapp"
+                  }
+                ]
+              },
+              "outputKey": "whatsapp"
+            }
+          ]
+        }
+      },
+      "id": "branch-channel",
+      "name": "Send By Channel",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [1800, -100]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.source.send_to }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-send",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2000, -200],
+      "credentials": {
+        "telegramApi": {
+          "id": "sigone-telegram",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO sitrep_runs (run_date, source_id, status, event_count) VALUES (CURRENT_DATE, $1, 'success', $2) ON CONFLICT (run_date, source_id) DO UPDATE SET status = 'success', event_count = $2, created_at = NOW();",
+        "options": {
+          "queryParameters": "={{ $json.source.source_id }}, {{ $json.stats.total_events }}"
+        }
+      },
+      "id": "postgres-log-run",
+      "name": "Log Run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [2200, -100],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "loop-done",
+      "name": "Go To Next Source",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2400, -100]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const source = $node['Loop Over Sources'].json;\nreturn { json: { message: `🛡️ *SigOne — Daily Brief*\\n📅 ${new Date().toISOString().split('T')[0]} | Source: ${source.source_id}\\n\\nNo security events recorded in the last 24 hours.`, source: source, stats: { total_events: 0 } } };"
+      },
+      "id": "code-no-activity",
+      "name": "No Activity Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 200]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Active Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Sources": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Sources": {
+      "main": [
+        [
+          {
+            "node": "Get Daily Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Daily Stats": {
+      "main": [
+        [
+          {
+            "node": "Get Today's Events (Capped)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today's Events (Capped)": {
+      "main": [
+        [
+          {
+            "node": "Any events today?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any events today?": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No Activity Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Summarize (LLM)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize (LLM)": {
+      "main": [
+        [
+          {
+            "node": "Render Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "main": [
+        [
+          {
+            "node": "Summarize (LLM)",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Digest": {
+      "main": [
+        [
+          {
+            "node": "Send By Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Activity Message": {
+      "main": [
+        [
+          {
+            "node": "Send By Channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send By Channel": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Telegram": {
+      "main": [
+        [
+          {
+            "node": "Log Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Run": {
+      "main": [
+        [
+          {
+            "node": "Go To Next Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Go To Next Source": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

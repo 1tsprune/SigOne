@@ -1,0 +1,71 @@
+{
+  "name": "sigone-error-alert",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const exec = $json.execution;\nconst wf = $json.workflow;\n\nlet msg = `🚨 *SigOne Workflow Error*\\n\\n`;\nmsg += `*Workflow:* ${wf.name} (ID: ${wf.id})\\n`;\nmsg += `*Execution ID:* ${exec.id}\\n`;\nif (exec.error) {\n  msg += `*Error message:* ${exec.error.message}\\n`;\n  if (exec.error.node && exec.error.node.name) {\n    msg += `*Failed node:* ${exec.error.node.name}\\n`;\n  }\n}\nmsg += `\\nPlease check the n8n execution logs for more details.`;\n\nreturn { json: { message: msg } };"
+      },
+      "id": "code-build-alert",
+      "name": "Build Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_ADMIN_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-alert",
+      "name": "Telegram (Admin)",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [400, 0],
+      "credentials": {
+        "telegramApi": {
+          "id": "sigone-telegram",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Alert": {
+      "main": [
+        [
+          {
+            "node": "Telegram (Admin)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

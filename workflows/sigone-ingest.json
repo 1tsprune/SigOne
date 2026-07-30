@@ -1,0 +1,152 @@
+{
+  "name": "sigone-ingest",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sigone-ingest",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "webhook-ingest",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "webhookId": "sigone-ingest-webhook-id",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "sigone-ingest-auth",
+          "name": "Header Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM source_registry WHERE source_id = $1 AND active = TRUE LIMIT 1;",
+        "options": {
+          "queryParameters": "={{ $json.query.source_id }}"
+        }
+      },
+      "id": "postgres-get-source",
+      "name": "Identify Source",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [200, 0],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.source_id ? true : false }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-source-found",
+      "name": "Source Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const crypto = require('crypto');\nconst mapping = $input.item.json.mapping_config;\nconst payload = $node['Webhook'].json.body;\n\nfunction extract(path, data) {\n  if (!path) return null;\n  try {\n    const jmespath = require('jmespath');\n    // Using jmespath for simplicity in n8n code block instead of jsonpath to avoid dependencies if possible,\n    // or we can implement a simple dot notation parser. Assuming n8n has jmespath or lodash.get.\n    // Since n8n's Code node doesn't have jsonpath natively without env var allows, let's use a safe fallback.\n    const lodash = require('lodash');\n    // Convert jsonpath ($.x.y) to lodash path (x.y)\n    const cleanPath = path.replace(/^\\$\\./, '');\n    const result = lodash.get(data, cleanPath);\n    return result !== undefined ? result : null;\n  } catch (e) {\n    return null;\n  }\n}\n\nconst normalized = {\n  source_id: $input.item.json.source_id,\n  source_type: $input.item.json.source_type,\n  rule_name: extract(mapping.rule_name, payload),\n  description: extract(mapping.description, payload),\n  src_ip: extract(mapping.src_ip, payload),\n  dst_ip: extract(mapping.dst_ip, payload),\n  hostname: extract(mapping.hostname, payload),\n  event_time: extract(mapping.event_time, payload),\n  mitre_technique: extract(mapping.mitre_technique, payload),\n  mitre_tactic: extract(mapping.mitre_tactic, payload),\n  raw: payload\n};\n\nconst eventIdSource = extract(mapping.event_id_source, payload);\nif (eventIdSource) {\n  normalized.event_id = String(eventIdSource);\n} else {\n  const hash = crypto.createHash('sha256');\n  hash.update(JSON.stringify(payload));\n  normalized.event_id = hash.digest('hex');\n}\n\nconst rawSeverity = extract(mapping.severity, payload);\nlet finalSeverity = 'info';\n\nif (mapping.severity_scale && mapping.severity_scale.type === 'wazuh_level') {\n  const level = parseInt(rawSeverity, 10);\n  if (!isNaN(level)) {\n    if (level >= mapping.severity_scale.critical) finalSeverity = 'critical';\n    else if (level >= mapping.severity_scale.high) finalSeverity = 'high';\n    else if (level >= mapping.severity_scale.medium) finalSeverity = 'medium';\n    else finalSeverity = 'low';\n  }\n} else {\n  finalSeverity = rawSeverity ? String(rawSeverity).toLowerCase() : 'info';\n}\nnormalized.severity = finalSeverity;\n\nreturn { json: normalized };"
+      },
+      "id": "code-normalize",
+      "name": "Normalize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, -100]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO security_events (event_id, source_id, source_type, event_time, severity, rule_name, description, src_ip, dst_ip, hostname, mitre_technique, mitre_tactic, raw) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) ON CONFLICT (event_id) DO NOTHING;",
+        "options": {
+          "queryParameters": "={{ $json.event_id }}, {{ $json.source_id }}, {{ $json.source_type }}, {{ $json.event_time }}, {{ $json.severity }}, {{ $json.rule_name }}, {{ $json.description }}, {{ $json.src_ip }}, {{ $json.dst_ip }}, {{ $json.hostname }}, {{ $json.mitre_technique }}, {{ $json.mitre_tactic }}, {{ JSON.stringify($json.raw) }}"
+        }
+      },
+      "id": "postgres-upsert",
+      "name": "Upsert Event",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.3,
+      "position": [800, -100],
+      "credentials": {
+        "postgres": {
+          "id": "sigone-postgres",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": "sigone-error-alert"
+      },
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Identify Source",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identify Source": {
+      "main": [
+        [
+          {
+            "node": "Source Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source Found?": {
+      "main": [
+        [
+          {
+            "node": "Normalize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Payload": {
+      "main": [
+        [
+          {
+            "node": "Upsert Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

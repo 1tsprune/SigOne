@@ -1,0 +1,18 @@
+{
+  "severity": "$.rule.level",
+  "rule_name": "$.rule.description",
+  "description": "$.full_log",
+  "src_ip": "$.data.srcip",
+  "dst_ip": "$.data.dstip",
+  "hostname": "$.agent.name",
+  "event_time": "$.timestamp",
+  "event_id_source": "$.id",
+  "mitre_technique": "$.rule.mitre.id[0]",
+  "mitre_tactic": "$.rule.mitre.tactic[0]",
+  "severity_scale": {
+    "type": "wazuh_level",
+    "critical": 12,
+    "high": 8,
+    "medium": 4
+  }
+}
