@@ -8,12 +8,12 @@ License: MIT · Platform: n8n · Status: MVP v0.1
 
 | If you are... | Start here |
 | --- | --- |
-| Onboarding your SIEM for the first time | `sources/<your-siem>/source-card.md` |
-| Writing a mapping for an unsupported SIEM | `docs/mapping-config-spec.md` |
-| A SOC manager wanting the digest format | `examples/sample-digest.md` |
-| An MSSP with multiple clients' SIEMs | `methodology/01-source-onboarding.md` |
-| Checking what MITRE mapping policy is | `methodology/04-mitre-passthrough-policy.md` |
-| A recruiter / hiring manager | README + one Source Card + sample digest |
+| Onboarding your SIEM for the first time | [`sources/<your-siem>/source-card.md`](./sources/) |
+| Writing a mapping for an unsupported SIEM | [`docs/mapping-config-spec.md`](./docs/mapping-config-spec.md) |
+| A SOC manager wanting the digest format | [`examples/sample-digest.md`](./examples/sample-digest.md) |
+| An MSSP with multiple clients' SIEMs | [`methodology/01-source-onboarding.md`](./methodology/01-source-onboarding.md) |
+| Checking what MITRE mapping policy is | [`methodology/04-mitre-passthrough-policy.md`](./methodology/04-mitre-passthrough-policy.md) |
+| A recruiter / hiring manager | README + one [Source Card](./sources/) + [sample digest](./examples/sample-digest.md) |
 
 ## What this is
 
@@ -21,9 +21,9 @@ SigOne ingests security alerts from any SIEM or XDR, normalizes them into one co
 
 ## Quick start
 
-1. Execute `db/schema.sql` in your PostgreSQL instance.
-2. Import the workflows from the `workflows/` directory into your n8n instance.
-3. Configure the `source_registry` table with your SIEMs (e.g., Wazuh). Use the provided `mapping.json` files in `sources/`.
+1. Execute [`db/schema.sql`](./db/schema.sql) in your PostgreSQL instance.
+2. Import the workflows from the [`workflows/`](./workflows/) directory into your n8n instance.
+3. Configure the `source_registry` table with your SIEMs (e.g., Wazuh). Use the provided `mapping.json` files in [`sources/`](./sources/).
 4. Point your SIEM webhooks at the `sigone-ingest` webhook endpoint (ensure authentication headers are set).
 
 ## Supported sources
@@ -42,27 +42,27 @@ SigOne ingests security alerts from any SIEM or XDR, normalizes them into one co
 
 ## Adding a new source
 
-Adding a new source does not require writing new n8n workflow logic. Simply write a new JSON mapping config. See `docs/mapping-config-spec.md` for syntax, null-fallback logic, and required array flattening behaviors.
+Adding a new source does not require writing new n8n workflow logic. Simply write a new JSON mapping config. See [`docs/mapping-config-spec.md`](./docs/mapping-config-spec.md) for syntax, null-fallback logic, and required array flattening behaviors.
 
-You can then add your source via the included `sigone-admin.json` webhook form without ever touching the SQL database manually.
+You can then add your source via the included [`sigone-admin.json`](./workflows/sigone-admin.json) webhook form without ever touching the SQL database manually.
 
 ## Example output
 
-See `examples/sample-digest.md` for a representative daily brief.
+See [`examples/sample-digest.md`](./examples/sample-digest.md) for a representative daily brief.
 
 ## Repository structure
 
-- `methodology/`: Principles behind normalization and severity/MITRE mappings.
-- `sources/`: Source Cards and mapping configurations for specific SIEMs/XDRs.
-- `docs/`: Specs and schema references.
-- `db/`: Database schemas.
-- `workflows/`: Exported n8n workflow definitions.
-- `examples/`: Sample outputs and raw data fixtures.
-- `tests/`: Mapping configuration test scripts.
+- [`methodology/`](./methodology/): Principles behind normalization and severity/MITRE mappings.
+- [`sources/`](./sources/): Source Cards and mapping configurations for specific SIEMs/XDRs.
+- [`docs/`](./docs/): Specs and schema references.
+- [`db/`](./db/): Database schemas.
+- [`workflows/`](./workflows/): Exported n8n workflow definitions.
+- [`examples/`](./examples/): Sample outputs and raw data fixtures.
+- [`tests/`](./tests/): Mapping configuration test scripts.
 
 ## MITRE ATT&CK policy
 
-We **never** guess. We either extract it from the source payload, or we leave it null. See `methodology/04-mitre-passthrough-policy.md` for details.
+We **never** guess. We either extract it from the source payload, or we leave it null. See [`methodology/04-mitre-passthrough-policy.md`](./methodology/04-mitre-passthrough-policy.md) for details.
 
 ## Roadmap
 
